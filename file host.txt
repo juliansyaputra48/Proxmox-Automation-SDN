@@ -1,0 +1,2 @@
+[servers]
+192.168.169.10 ansible_user=root ansible_ssh_pass=12345678

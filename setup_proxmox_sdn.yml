@@ -1,0 +1,89 @@
+---
+- name: Setup Proxmox SDN
+  hosts: proxmox
+  become: yes
+  vars_files:
+    - group_vars/proxmox.yml
+  tasks:
+    - name: Get API Token
+      uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/access/ticket"
+        method: POST
+        body: "username=root@pam&password={{ proxmox_password }}"
+        body_format: form-urlencoded
+        validate_certs: no
+      register: login
+      delegate_to: localhost
+
+    - name: Create SDN Zones
+      uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/cluster/sdn/zones"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+          CSRFPreventionToken: "{{ login.json.data.CSRFPreventionToken }}"
+          Cookie: "PVEAuthCookie={{ login.json.data.ticket }}"
+        body: >
+          {
+            "zone": "{{ item.zone }}",
+            "type": "{{ item.type }}",
+            "ipam": "{{ item.ipam }}",
+            "mtu": "{{ item.mtu }}",
+            "dhcp": "{{ item.dhcp }}",
+          }
+        body_format: json
+        validate_certs: no
+      delegate_to: localhost
+      loop: "{{ zones }}"
+
+    - name: Create VNets
+      uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/cluster/sdn/vnets"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+          CSRFPreventionToken: "{{ login.json.data.CSRFPreventionToken }}"
+          Cookie: "PVEAuthCookie={{ login.json.data.ticket }}"
+        body: >
+          {
+            "vnet": "{{ item.vnet }}",
+            "zone": "{{ item.zone }}"
+          }
+        body_format: json
+        validate_certs: no
+      delegate_to: localhost
+      loop: "{{ zones }}"
+
+    - name: Create Subnets
+      uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/cluster/sdn/vnets/{{ item.vnet }}/subnets"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+          CSRFPreventionToken: "{{ login.json.data.CSRFPreventionToken }}"
+          Cookie: "PVEAuthCookie={{ login.json.data.ticket }}"
+        body: >
+          {
+            "type": "subnet",
+            "subnet": "{{ item.network }}/{{ item.prefix }}",
+            "gateway": "{{ item.gateway }}",
+            "snat": {{ item.snat }},
+            "dhcp-range": ["start-address={{ item.start }},end-address={{ item.end }}"]
+          }
+        body_format: json
+        validate_certs: no
+      delegate_to: localhost
+      loop: "{{ zones }}"
+
+    - name: Apply SDN Configuration
+      uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/cluster/sdn"
+        method: PUT
+        headers:
+          Content-Type: "application/json"
+          CSRFPreventionToken: "{{ login.json.data.CSRFPreventionToken }}"
+          Cookie: "PVEAuthCookie={{ login.json.data.ticket }}"
+        body: "{}"
+        body_format: json
+        validate_certs: no
+      delegate_to: localhost

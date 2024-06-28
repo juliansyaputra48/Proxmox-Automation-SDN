@@ -1,0 +1,65 @@
+---
+- name: Delete Proxmox SDN Configuration
+  hosts: proxmox
+  become: yes
+  vars_files:
+    - group_vars/proxmox.yml
+  tasks:
+    - name: Get API Token
+      uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/access/ticket"
+        method: POST
+        body: "username=root@pam&password={{ proxmox_password }}"
+        body_format: form-urlencoded
+        validate_certs: no
+      register: login
+      delegate_to: localhost
+
+    - name: Delete Subnets
+      uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/cluster/sdn/vnets/{{ item.vnet }}/subnets/{{ item.zone }}-{{ item.network }}-{{ item.prefix }}"
+        method: DELETE
+        headers:
+          Content-Type: "application/json"
+          CSRFPreventionToken: "{{ login.json.data.CSRFPreventionToken }}"
+          Cookie: "PVEAuthCookie={{ login.json.data.ticket }}"
+        validate_certs: no
+      delegate_to: localhost
+      loop: "{{ zones }}"
+
+    - name: Delete VNets
+      uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/cluster/sdn/vnets/{{ item.vnet }}"
+        method: DELETE
+        headers:
+          Content-Type: "application/json"
+          CSRFPreventionToken: "{{ login.json.data.CSRFPreventionToken }}"
+          Cookie: "PVEAuthCookie={{ login.json.data.ticket }}"
+        validate_certs: no
+      delegate_to: localhost
+      loop: "{{ zones }}"
+
+    - name: Delete SDN Zones
+      uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/cluster/sdn/zones/{{ item.zone }}"
+        method: DELETE
+        headers:
+          Content-Type: "application/json"
+          CSRFPreventionToken: "{{ login.json.data.CSRFPreventionToken }}"
+          Cookie: "PVEAuthCookie={{ login.json.data.ticket }}"
+        validate_certs: no
+      delegate_to: localhost
+      loop: "{{ zones }}"
+
+    - name: Apply SDN Configuration
+      uri:
+        url: "https://{{ inventory_hostname }}:8006/api2/json/cluster/sdn"
+        method: PUT
+        headers:
+          Content-Type: "application/json"
+          CSRFPreventionToken: "{{ login.json.data.CSRFPreventionToken }}"
+          Cookie: "PVEAuthCookie={{ login.json.data.ticket }}"
+        body: "{}"
+        body_format: json
+        validate_certs: no
+      delegate_to: localhost

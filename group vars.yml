@@ -1,0 +1,42 @@
+---
+proxmox_password: "12345678"
+
+zones:
+  - zone: "sdn01"
+    type: "simple"
+    ipam: "pve"
+    mtu: 1500
+    dhcp: "dnsmasq"
+    vnet: "vnet01"
+    network: "192.168.100.0"
+    prefix: "24"
+    gateway: "192.168.100.1"
+    snat: 1
+    start: "192.168.100.10"
+    end: "192.168.100.100"
+
+  - zone: "sdn02"
+    type: "simple"
+    ipam: "pve"
+    mtu: 1500
+    dhcp: "dnsmasq"
+    vnet: "vnet02"
+    network: "192.168.101.0"
+    prefix: "24"
+    gateway: "192.168.101.1"
+    snat: 1
+    start: "192.168.101.10"
+    end: "192.168.101.100"
+
+  - zone: "sdn03"
+    type: "simple"
+    ipam: "pve"
+    mtu: 1500
+    dhcp: "dnsmasq"
+    vnet: "vnet03"
+    network: "192.168.102.0"
+    prefix: "24"
+    gateway: "192.168.102.1"
+    snat: 1
+    start: "192.168.102.10"
+    end: "192.168.102.100"
